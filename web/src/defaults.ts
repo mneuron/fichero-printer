@@ -32,13 +32,14 @@ export const DEFAULT_LABEL_PRESETS: LabelPreset[] = [
 /** Default canvas dimensions */
 export const DEFAULT_LABEL_PROPS: LabelProps = {
   printDirection: "left",
+  dpmm: 8,
   size: {
     width: 232,
     height: 96,
   },
 };
 
-/** Object movement snapping */
+/** Keyboard movement step in canvas pixels */
 export const GRID_SIZE: number = 5;
 
 /** Newly created Fabric object dimensions */
@@ -82,7 +83,10 @@ export const THUMBNAIL_QUALITY = 0.7;
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
   fitMode: "stretch",
-  iconListMode: "both"
+  iconListMode: "both",
+  showGrid: true,
+  snapToGrid: false,
+  snapToObjects: true,
 };
 
 export const CSV_DEFAULT = "var1,var2\n123,456\n777,888";

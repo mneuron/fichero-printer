@@ -66,9 +66,9 @@
     appConfig.update((v) => ({ ...v, fitMode: fitMode }));
   };
 
-  const rotate90 = () => {
+  const rotateBy = (degrees: number) => {
     const center = selectedObject.getCenterPoint();
-    selectedObject.rotate(((selectedObject.angle ?? 0) + 90) % 360);
+    selectedObject.rotate(((selectedObject.angle ?? 0) + degrees + 360) % 360);
     selectedObject.setPositionByOrigin(center, "center", "center");
     valueUpdated();
   };
@@ -88,7 +88,10 @@
 <ObjectPositionControls {selectedObject} />
 
 {#if canRotate90()}
-  <button class="btn btn-sm btn-secondary" onclick={rotate90} title={$tr("params.generic.rotate90")}>
+  <button class="btn btn-sm btn-secondary" onclick={() => rotateBy(-90)} title={$tr("params.generic.rotate90.counterclockwise")}>
+    <MdIcon icon="rotate_left" />
+  </button>
+  <button class="btn btn-sm btn-secondary" onclick={() => rotateBy(90)} title={$tr("params.generic.rotate90.clockwise")}>
     <MdIcon icon="rotate_right" />
   </button>
 {/if}

@@ -17,6 +17,7 @@ type FoldInfo = {
   segments: FoldSegment[];
 };
 type MirrorInfo = { pos: fabric.Point; flip: boolean };
+export type SnapGuide = { axis: "vertical" | "horizontal"; position: number };
 
 export class CustomCanvas extends fabric.Canvas {
   private labelProps: LabelProps = DEFAULT_LABEL_PROPS;
@@ -28,6 +29,9 @@ export class CustomCanvas extends fabric.Canvas {
   private customBackground: boolean = true;
   private highlightMirror: boolean = true;
   private virtualZoomRatio: number = 1;
+  private gridVisible: boolean = true;
+  private gridSpacing: number = 8;
+  private snapGuides: SnapGuide[] = [];
 
   constructor(
     el?: string | HTMLCanvasElement,
@@ -104,6 +108,45 @@ export class CustomCanvas extends fabric.Canvas {
 
   setHighlightMirror(value: boolean) {
     this.highlightMirror = value;
+  }
+
+  setGridOptions(visible: boolean, spacing: number) {
+    this.gridVisible = visible;
+    this.gridSpacing = spacing;
+    this.requestRenderAll();
+  }
+
+  setSnapGuides(guides: SnapGuide[]) {
+    this.snapGuides = guides;
+    this.requestRenderAll();
+  }
+
+  private drawGrid(ctx: CanvasRenderingContext2D) {
+    if (!this.gridVisible || !this.customBackground || this.gridSpacing <= 0) return;
+
+    const bb = this.getLabelBounds();
+    const minorWidth = 0.5 / this.virtualZoomRatio;
+    const majorWidth = 0.8 / this.virtualZoomRatio;
+
+    for (let x = bb.startX + this.gridSpacing; x < bb.endX; x += this.gridSpacing) {
+      const millimetre = Math.round((x - bb.startX) / this.gridSpacing);
+      ctx.beginPath();
+      ctx.strokeStyle = millimetre % 5 === 0 ? "rgba(70, 110, 150, 0.32)" : "rgba(70, 110, 150, 0.15)";
+      ctx.lineWidth = millimetre % 5 === 0 ? majorWidth : minorWidth;
+      ctx.moveTo(x, bb.startY);
+      ctx.lineTo(x, bb.endY);
+      ctx.stroke();
+    }
+
+    for (let y = bb.startY + this.gridSpacing; y < bb.endY; y += this.gridSpacing) {
+      const millimetre = Math.round((y - bb.startY) / this.gridSpacing);
+      ctx.beginPath();
+      ctx.strokeStyle = millimetre % 5 === 0 ? "rgba(70, 110, 150, 0.32)" : "rgba(70, 110, 150, 0.15)";
+      ctx.lineWidth = millimetre % 5 === 0 ? majorWidth : minorWidth;
+      ctx.moveTo(bb.startX, y);
+      ctx.lineTo(bb.endX, y);
+      ctx.stroke();
+    }
   }
 
   /** Get label bounds without tail */
@@ -195,6 +238,8 @@ export class CustomCanvas extends fabric.Canvas {
       ctx.beginPath();
       ctx.arc(this.width / 2, this.height / 2, this.height / 2, 0, 2 * Math.PI);
       ctx.fill();
+      ctx.clip();
+      this.drawGrid(ctx);
       ctx.restore();
       return;
     }
@@ -246,6 +291,11 @@ export class CustomCanvas extends fabric.Canvas {
       }
     }
     ctx.fill();
+
+    ctx.save();
+    ctx.clip();
+    this.drawGrid(ctx);
+    ctx.restore();
 
     // Draw label(s)
     ctx.fillStyle = "white";
@@ -317,27 +367,42 @@ export class CustomCanvas extends fabric.Canvas {
   ) {
     super._renderObjects(ctx, objects);
 
-    if (!this.highlightMirror || this.getActiveObjects().length > 1) {
-      return;
+    if (this.highlightMirror && this.getActiveObjects().length <= 1) {
+      ctx.save();
+      objects.forEach((obj) => {
+        const infos = this.getMirroredObjectCoords(obj);
+        infos.forEach((info) => {
+          const bbox = obj.getBoundingRect();
+          ctx.fillStyle = this.MIRROR_GHOST_COLOR;
+          ctx.fillRect(
+            info.pos.x - bbox.width / 2,
+            info.pos.y - bbox.height / 2,
+            bbox.width,
+            bbox.height,
+          );
+        });
+      });
+      ctx.restore();
     }
 
-    ctx.save();
-
-    objects.forEach((obj) => {
-      const infos = this.getMirroredObjectCoords(obj);
-      infos.forEach((info) => {
-        const bbox = obj.getBoundingRect();
-        ctx.fillStyle = this.MIRROR_GHOST_COLOR;
-        ctx.fillRect(
-          info.pos.x - bbox.width / 2,
-          info.pos.y - bbox.height / 2,
-          bbox.width,
-          bbox.height,
-        );
-        ctx.restore();
+    if (this.snapGuides.length > 0) {
+      ctx.save();
+      ctx.strokeStyle = "#0d6efd";
+      ctx.lineWidth = 1 / this.virtualZoomRatio;
+      ctx.setLineDash([5 / this.virtualZoomRatio, 4 / this.virtualZoomRatio]);
+      this.snapGuides.forEach((guide) => {
+        ctx.beginPath();
+        if (guide.axis === "vertical") {
+          ctx.moveTo(guide.position, 0);
+          ctx.lineTo(guide.position, this.height);
+        } else {
+          ctx.moveTo(0, guide.position);
+          ctx.lineTo(this.width, guide.position);
+        }
+        ctx.stroke();
       });
-    });
-    ctx.restore();
+      ctx.restore();
+    }
   }
 
   /**

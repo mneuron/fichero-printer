@@ -5,7 +5,7 @@
   import { Barcode } from "$/fabric-object/barcode";
   import { QRCode } from "$/fabric-object/qrcode";
   import { iconCodepoints, type MaterialIcon } from "$/styles/mdi_icons";
-  import { automation, connectionState, csvData, loadedFonts } from "$/stores";
+  import { appConfig, automation, connectionState, csvData, loadedFonts } from "$/stores";
   import {
     type ExportedLabelTemplate,
     type FabricJson,
@@ -30,7 +30,7 @@
   import QrCodeParamsPanel from "$/components/designer-controls/QRCodeParamsControls.svelte";
   import TextParamsControls from "$/components/designer-controls/TextParamsControls.svelte";
   import VariableInsertControl from "$/components/designer-controls/VariableInsertControl.svelte";
-  import { DEFAULT_LABEL_PROPS, GRID_SIZE } from "$/defaults";
+  import { DEFAULT_LABEL_PROPS } from "$/defaults";
   import { LabelDesignerUtils } from "$/utils/label_designer_utils";
   import SavedLabelsMenu from "$/components/designer-controls/SavedLabelsMenu.svelte";
   import { CustomCanvas } from "$/fabric-object/custom_canvas";
@@ -227,6 +227,77 @@
     fabricCanvas.fitVirtualZoom(availableWidth, availableHeight);
   };
 
+  const toggleConfig = (key: "showGrid" | "snapToGrid" | "snapToObjects") => {
+    appConfig.update((value) => ({ ...value, [key]: !value[key] }));
+  };
+
+  const magneticSnap = (target: fabric.FabricObject) => {
+    if (!$appConfig.snapToObjects) return { dx: undefined, dy: undefined, guides: [] };
+
+    const tolerance = 7 / (fabricCanvas?.getVirtualZoom() ?? 1);
+    const activeObjects = new Set(fabricCanvas!.getActiveObjects());
+    const bounds = target.getBoundingRect();
+    const movingX = [bounds.left, bounds.left + bounds.width / 2, bounds.left + bounds.width];
+    const movingY = [bounds.top, bounds.top + bounds.height / 2, bounds.top + bounds.height];
+    let bestX: { distance: number; delta: number; position: number } | undefined;
+    let bestY: { distance: number; delta: number; position: number } | undefined;
+
+    fabricCanvas!.getObjects().forEach((other) => {
+      if (other === target || activeObjects.has(other)) return;
+      const otherBounds = other.getBoundingRect();
+      const otherX = [otherBounds.left, otherBounds.left + otherBounds.width / 2, otherBounds.left + otherBounds.width];
+      const otherY = [otherBounds.top, otherBounds.top + otherBounds.height / 2, otherBounds.top + otherBounds.height];
+
+      movingX.forEach((moving) => otherX.forEach((fixed) => {
+        const delta = fixed - moving;
+        const distance = Math.abs(delta);
+        if (distance <= tolerance && (!bestX || distance < bestX.distance)) bestX = { distance, delta, position: fixed };
+      }));
+      movingY.forEach((moving) => otherY.forEach((fixed) => {
+        const delta = fixed - moving;
+        const distance = Math.abs(delta);
+        if (distance <= tolerance && (!bestY || distance < bestY.distance)) bestY = { distance, delta, position: fixed };
+      }));
+    });
+
+    const guides = [];
+    if (bestX) guides.push({ axis: "vertical" as const, position: bestX.position });
+    if (bestY) guides.push({ axis: "horizontal" as const, position: bestY.position });
+    return { dx: bestX?.delta, dy: bestY?.delta, guides };
+  };
+
+  const onObjectMoving = (e: { target?: fabric.FabricObject; e: Event }) => {
+    if (!e.target) return;
+    const target = e.target;
+    const originalCenter = target.getCenterPoint();
+    const ctrlPressed = e.e instanceof MouseEvent && e.e.ctrlKey;
+    const magnetic = ctrlPressed ? { dx: undefined, dy: undefined, guides: [] } : magneticSnap(target);
+
+    if ($appConfig.snapToGrid) {
+      const spacing = labelProps.dpmm ?? 8;
+      const topLeft = target.getPointByOrigin("left", "top");
+      target.setPositionByOrigin(
+        new fabric.Point(Math.round(topLeft.x / spacing) * spacing, Math.round(topLeft.y / spacing) * spacing),
+        "left",
+        "top",
+      );
+    }
+
+    if (magnetic.dx !== undefined || magnetic.dy !== undefined) {
+      const currentCenter = target.getCenterPoint();
+      target.setPositionByOrigin(
+        new fabric.Point(
+          magnetic.dx === undefined ? currentCenter.x : originalCenter.x + magnetic.dx,
+          magnetic.dy === undefined ? currentCenter.y : originalCenter.y + magnetic.dy,
+        ),
+        "center",
+        "center",
+      );
+    }
+    target.setCoords();
+    fabricCanvas!.setSnapGuides(magnetic.guides);
+  };
+
   const getCanvasForPreview = (): FabricJson => {
     return fabricCanvas!.toJSON();
   };
@@ -332,18 +403,14 @@
       dropdowns.forEach((el) => new Dropdown(el).hide());
     });
 
-    fabricCanvas.on("object:moving", (e): void => {
-      if (e.target && e.target.left !== undefined && e.target.top !== undefined) {
-        e.target.set({
-          left: Math.round(e.target.left / GRID_SIZE) * GRID_SIZE,
-          top: Math.round(e.target.top / GRID_SIZE) * GRID_SIZE,
-        });
-      }
-    });
+    fabricCanvas.on("object:moving", onObjectMoving);
 
     fabricCanvas.on("object:modified", (): void => {
+      fabricCanvas!.setSnapGuides([]);
       undo.push(fabricCanvas!, labelProps);
     });
+
+    fabricCanvas.on("mouse:up", (): void => fabricCanvas!.setSnapGuides([]));
 
     fabricCanvas.on("text:changed", () => {
       editRevision++;
@@ -432,6 +499,10 @@
   });
 
   $effect(() => {
+    fabricCanvas?.setGridOptions($appConfig.showGrid !== false, labelProps.dpmm ?? 8);
+  });
+
+  $effect(() => {
     if (!previewOpened) {
       printNow = false;
     }
@@ -468,6 +539,25 @@
     <div class="col d-flex justify-content-center">
       <div class="toolbar d-flex flex-wrap gap-1 justify-content-center align-items-center">
         <LabelPropsEditor {labelProps} onChange={onUpdateLabelProps} />
+
+        <button
+          class="btn btn-sm {$appConfig.showGrid !== false ? 'btn-primary' : 'btn-secondary'}"
+          onclick={() => toggleConfig("showGrid")}
+          title={$tr("editor.grid.show")}>
+          <MdIcon icon="grid_on" />
+        </button>
+        <button
+          class="btn btn-sm {$appConfig.snapToGrid ? 'btn-primary' : 'btn-secondary'}"
+          onclick={() => toggleConfig("snapToGrid")}
+          title={$tr("editor.grid.snap")}>
+          <MdIcon icon="grid_4x4" />
+        </button>
+        <button
+          class="btn btn-sm {$appConfig.snapToObjects ? 'btn-primary' : 'btn-secondary'}"
+          onclick={() => toggleConfig("snapToObjects")}
+          title={$tr("editor.objects.snap")}>
+          <MdIcon icon="align_horizontal_center" />
+        </button>
 
         <button class="btn btn-sm btn-secondary" onclick={clearCanvas} title={$tr("editor.clear")}>
           <MdIcon icon="cancel_presentation" />

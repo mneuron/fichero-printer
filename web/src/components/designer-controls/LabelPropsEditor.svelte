@@ -104,6 +104,7 @@
 
     onChange({
       printDirection: printDirection,
+      dpmm,
       size: {
         width: Math.floor(newWidth),
         height: Math.floor(newHeight),
@@ -191,6 +192,7 @@
   };
 
   const fillWithCurrentParams = () => {
+    dpmm = labelProps.dpmm ?? 8;
     prevUnit = "px";
     width = labelProps.size.width;
     height = labelProps.size.height;

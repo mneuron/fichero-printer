@@ -29,6 +29,7 @@ export const FabricObjectSchema = z.custom<fabric.FabricObject>((val: any): bool
 
 export const LabelPropsSchema = z.object({
   printDirection: z.enum(["left", "top"]),
+  dpmm: z.number().positive().optional(),
   size: z.object({
     width: z.number().positive(),
     height: z.number().positive(),
@@ -106,6 +107,9 @@ export const AppConfigSchema = z.object({
   pageDelay: z.number().gte(0).optional(),
   iconListMode: z.enum(["user", "pack", "both"]),
   packetIntervalMs: z.number().gte(0).optional(),
+  showGrid: z.boolean().optional(),
+  snapToGrid: z.boolean().optional(),
+  snapToObjects: z.boolean().optional(),
 });
 
 export const UserIconSchema = z.object({
