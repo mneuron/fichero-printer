@@ -3,7 +3,7 @@
   import { tr } from "$/utils/i18n";
   import MdIcon from "$/components/basic/MdIcon.svelte";
   import FontFamilyPicker from "$/components/designer-controls/FontFamilyPicker.svelte";
-  import { TextboxExt } from "$/fabric-object/textbox-ext";
+  import { TextboxExt, type TextOrientation } from "$/fabric-object/textbox-ext";
 
   interface Props {
     selectedText: fabric.IText;
@@ -101,10 +101,23 @@
   };
 
   const editInPopup = () => {
-    const text = prompt($tr("params.text.edit.title"), selectedText.text);
+    const currentText = selectedText instanceof TextboxExt ? selectedText.getSourceText() : selectedText.text;
+    const text = prompt($tr("params.text.edit.title"), currentText);
     if (text !== null) {
-      selectedText.set({ text });
+      if (selectedText instanceof TextboxExt) {
+        selectedText.setTextContent(text);
+      } else {
+        selectedText.set({ text });
+      }
       selectedText.isEditing = false;
+      valueUpdated();
+    }
+  };
+
+  const textOrientationChanged = (orientation: TextOrientation) => {
+    if (selectedText instanceof TextboxExt) {
+      selectedText.exitEditing();
+      selectedText.setTextOrientation(orientation);
       valueUpdated();
     }
   };
@@ -222,6 +235,21 @@
 {/if}
 
 {#if selectedText instanceof TextboxExt}
+  <div class="btn-group btn-group-sm" role="group" title={$tr("params.text.orientation")}>
+    <button
+      class="btn {selectedText.textOrientation === 'horizontal' ? 'btn-secondary' : ''}"
+      onclick={() => textOrientationChanged("horizontal")}
+      title={$tr("params.text.orientation.horizontal")}>
+      <MdIcon icon="text_fields" />
+    </button>
+    <button
+      class="btn {selectedText.textOrientation === 'stacked' ? 'btn-secondary' : ''}"
+      onclick={() => textOrientationChanged("stacked")}
+      title={$tr("params.text.orientation.stacked")}>
+      <MdIcon icon="vertical_distribute" />
+    </button>
+  </div>
+
   <!-- fixme: Custom property not auto-rendered for some reason -->
   <button
     class="btn btn-sm {selectedText.fontAutoSize ? 'btn-secondary' : ''}"

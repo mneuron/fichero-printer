@@ -2,12 +2,18 @@ import * as fabric from "fabric";
 
 interface UniqueTextboxExtProps {
   fontAutoSize: boolean;
+  textOrientation: TextOrientation;
+  sourceText: string;
 }
 
-const TEXTBOX_PROPS: Array<keyof UniqueTextboxExtProps> = ["fontAutoSize"];
+export type TextOrientation = "horizontal" | "stacked";
+
+const TEXTBOX_PROPS: Array<keyof UniqueTextboxExtProps> = ["fontAutoSize", "textOrientation", "sourceText"];
 
 export const textboxExtDefaultValues: Partial<fabric.TClassProperties<TextboxExt>> = {
   fontAutoSize: false,
+  textOrientation: "horizontal",
+  sourceText: "",
 };
 
 export interface TextboxExtProps extends fabric.TextboxProps, UniqueTextboxExtProps {}
@@ -22,6 +28,8 @@ export class TextboxExt<
   implements UniqueTextboxExtProps
 {
   declare fontAutoSize: boolean;
+  declare textOrientation: TextOrientation;
+  declare sourceText: string;
 
   private widthBeforeEditing?: number;
 
@@ -29,6 +37,8 @@ export class TextboxExt<
     super(text, options);
     Object.assign(this, textboxExtDefaultValues);
     this.setOptions(options);
+    this.sourceText = options?.sourceText ?? text;
+    this.applyTextOrientation();
 
     this.setControlsVisibility({
       mb: false,
@@ -36,18 +46,45 @@ export class TextboxExt<
     });
   }
 
+  private stackText(text: string): string {
+    return text
+      .split("\n")
+      .map((line) => Array.from(line).join("\n"))
+      .join("\n");
+  }
+
+  private applyTextOrientation(): void {
+    const displayText = this.textOrientation === "stacked" ? this.stackText(this.sourceText) : this.sourceText;
+    super.set("text", displayText);
+  }
+
+  getSourceText(): string {
+    return this.sourceText ?? this.text ?? "";
+  }
+
+  setTextContent(text: string): void {
+    this.sourceText = text;
+    this.applyTextOrientation();
+  }
+
+  setTextOrientation(orientation: TextOrientation): void {
+    if (this.textOrientation === orientation) return;
+    this.sourceText = this.getSourceText();
+    this.textOrientation = orientation;
+    this.applyTextOrientation();
+  }
+
   /** Set text and reduce fontSize until text fits to the given width */
   setAndShrinkText(text: string, maxWidth: number, maxLines?: number) {
+    this.setTextContent(text);
     const linesLimit = maxLines ?? this._splitTextIntoLines(this.text).lines.length;
 
-    let linesCount = this._splitTextIntoLines(text).lines.length;
-
-    this.set({ text });
+    let linesCount = this._splitTextIntoLines(this.text).lines.length;
 
     while ((linesCount > linesLimit || this.width > maxWidth) && this.fontSize > 2) {
       this.fontSize -= 1;
-      this.set({ text, width: maxWidth });
-      linesCount = this._splitTextIntoLines(text).lines.length;
+      this.set({ width: maxWidth });
+      linesCount = this._splitTextIntoLines(this.text).lines.length;
     }
   }
 
@@ -63,17 +100,23 @@ export class TextboxExt<
   }
 
   override enterEditingImpl() {
+    if (this.textOrientation === "stacked") {
+      super.set("text", this.sourceText);
+    }
     super.enterEditingImpl();
     this.widthBeforeEditing = this.width;
   }
 
   override exitEditingImpl() {
+    this.sourceText = this.text;
     super.exitEditingImpl();
+    this.applyTextOrientation();
     this.widthBeforeEditing = undefined;
   }
 
   override updateFromTextArea(): void {
     super.updateFromTextArea();
+    this.sourceText = this.text;
 
     if (this.widthBeforeEditing !== undefined && this.fontAutoSize) {
       const lines = this.text.split("\n").length;

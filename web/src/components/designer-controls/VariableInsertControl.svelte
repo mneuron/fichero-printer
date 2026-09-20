@@ -4,6 +4,7 @@
   import QRCode from "$/fabric-object/qrcode";
   import Barcode from "$/fabric-object/barcode";
   import MdIcon from "$/components/basic/MdIcon.svelte";
+  import { TextboxExt } from "$/fabric-object/textbox-ext";
 
   interface Props {
     selectedObject: fabric.FabricObject;
@@ -18,7 +19,10 @@
       value = `{dt|${format}}`;
     }
 
-    if (selectedObject instanceof fabric.IText) {
+    if (selectedObject instanceof TextboxExt) {
+      selectedObject.exitEditing();
+      selectedObject.setTextContent(`${selectedObject.getSourceText()}${value}`);
+    } else if (selectedObject instanceof fabric.IText) {
       selectedObject.exitEditing();
       selectedObject.set({ text: `${selectedObject.text}${value}` });
     } else if (selectedObject instanceof QRCode) {

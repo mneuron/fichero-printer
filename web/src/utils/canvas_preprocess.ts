@@ -29,10 +29,13 @@ const preprocessString = (input: string, variables?: { [v: string]: string }): s
 export const canvasPreprocess = (canvas: fabric.Canvas, variables?: { [key: string]: string }) => {
   canvas.forEachObject((obj: fabric.FabricObject) => {
     if (obj instanceof fabric.IText) {
-      const text = preprocessString(obj.text ?? "", variables);
+      const sourceText = obj instanceof TextboxExt ? obj.getSourceText() : (obj.text ?? "");
+      const text = preprocessString(sourceText, variables);
 
       if (obj instanceof TextboxExt && obj.fontAutoSize) {
         obj.setAndShrinkText(text, obj.width);
+      } else if (obj instanceof TextboxExt) {
+        obj.setTextContent(text);
       } else {
         obj.set({ text });
       }
