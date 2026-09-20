@@ -130,6 +130,17 @@ export class CustomCanvas extends fabric.Canvas {
     const minorWidth = 0.5;
     const majorWidth = 1;
 
+    ctx.save();
+    ctx.beginPath();
+    if (this.labelProps.shape === "circle") {
+      ctx.arc(this.width / 2, this.height / 2, this.height / 2, 0, 2 * Math.PI);
+    } else if (this.labelProps.shape === "rounded_rect") {
+      ctx.roundRect(bb.startX, bb.startY, bb.width, bb.height, this.ROUND_RADIUS);
+    } else {
+      ctx.rect(bb.startX, bb.startY, bb.width, bb.height);
+    }
+    ctx.clip();
+
     for (let x = bb.startX + this.gridSpacing; x < bb.endX; x += this.gridSpacing) {
       const millimetre = Math.round((x - bb.startX) / this.gridSpacing);
       ctx.beginPath();
@@ -149,6 +160,8 @@ export class CustomCanvas extends fabric.Canvas {
       ctx.lineTo(bb.endX, y);
       ctx.stroke();
     }
+
+    ctx.restore();
   }
 
   /** Get label bounds without tail */
@@ -240,8 +253,6 @@ export class CustomCanvas extends fabric.Canvas {
       ctx.beginPath();
       ctx.arc(this.width / 2, this.height / 2, this.height / 2, 0, 2 * Math.PI);
       ctx.fill();
-      ctx.clip();
-      this.drawGrid(ctx);
       ctx.restore();
       return;
     }
@@ -293,11 +304,6 @@ export class CustomCanvas extends fabric.Canvas {
       }
     }
     ctx.fill();
-
-    ctx.save();
-    ctx.clip();
-    this.drawGrid(ctx);
-    ctx.restore();
 
     // Draw label(s)
     ctx.fillStyle = "white";
@@ -367,6 +373,9 @@ export class CustomCanvas extends fabric.Canvas {
     ctx: CanvasRenderingContext2D,
     objects: fabric.FabricObject[],
   ) {
+    // Draw editor aids here instead of in _renderBackground: Fabric may cache or
+    // replace the background layer on mobile browsers.
+    this.drawGrid(ctx);
     super._renderObjects(ctx, objects);
 
     if (this.highlightMirror && this.getActiveObjects().length <= 1) {
