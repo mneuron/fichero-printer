@@ -60,7 +60,7 @@ export class CustomCanvas extends fabric.Canvas {
   }
 
   public virtualZoom(newZoom: number) {
-    this.virtualZoomRatio = Math.min(Math.max(0.25, newZoom), 4);
+    this.virtualZoomRatio = Math.min(Math.max(0.25, newZoom), 12);
     this.setDimensions(
       {
         width: this.virtualZoomRatio * this.getWidth() + "px",
@@ -84,6 +84,13 @@ export class CustomCanvas extends fabric.Canvas {
 
   public resetVirtualZoom() {
     this.virtualZoom(1);
+  }
+
+  public fitVirtualZoom(maxWidth: number, maxHeight: number) {
+    if (this.getWidth() <= 0 || this.getHeight() <= 0) return;
+    const widthRatio = maxWidth / this.getWidth();
+    const heightRatio = maxHeight / this.getHeight();
+    this.virtualZoom(Math.min(widthRatio, heightRatio));
   }
 
   setLabelProps(value: LabelProps) {

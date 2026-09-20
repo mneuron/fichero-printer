@@ -65,6 +65,15 @@
     const fitMode = e.currentTarget.value as "stretch" | "ratio_min" | "ratio_max";
     appConfig.update((v) => ({ ...v, fitMode: fitMode }));
   };
+
+  const rotate90 = () => {
+    const center = selectedObject.getCenterPoint();
+    selectedObject.rotate(((selectedObject.angle ?? 0) + 90) % 360);
+    selectedObject.setPositionByOrigin(center, "center", "center");
+    valueUpdated();
+  };
+
+  const canRotate90 = () => selectedObject instanceof fabric.IText || selectedObject instanceof fabric.FabricImage || selectedObject instanceof fabric.Group;
 </script>
 
 <input type="hidden" value={editRevision}>
@@ -77,6 +86,12 @@
 </button>
 
 <ObjectPositionControls {selectedObject} />
+
+{#if canRotate90()}
+  <button class="btn btn-sm btn-secondary" onclick={rotate90} title={$tr("params.generic.rotate90")}>
+    <MdIcon icon="rotate_right" />
+  </button>
+{/if}
 
 <div class="dropdown">
   <button

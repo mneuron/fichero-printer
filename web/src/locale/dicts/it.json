@@ -42,6 +42,7 @@
     "params.csv.title": "CSV",
     "params.generic.center.horizontal": "Centra orizzontalmente",
     "params.generic.center.vertical": "Centra verticalmente",
+    "params.generic.rotate90": "Ruota di 90° in senso orario",
     "params.label.apply": "Applica",
     "params.label.current": "Parametri correnti:",
     "params.label.direction.left": "Sinistra",

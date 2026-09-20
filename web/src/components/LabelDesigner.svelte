@@ -48,6 +48,8 @@
   let printNow = $state<boolean>(false);
   let csvEnabled = $state<boolean>(false);
   let windowWidth = $state<number>(0);
+  let windowHeight = $state<number>(0);
+  let canvasStageWidth = $state<number>(0);
   let undoState = $state<UndoState>({ undoDisabled: false, redoDisabled: false });
 
   const undo = new UndoRedo();
@@ -214,6 +216,15 @@
 
     // trigger reactivity for controls
     editRevision++;
+  };
+
+  const fitCanvasToBrowser = () => {
+    if (!fabricCanvas || canvasStageWidth <= 0 || windowHeight <= 0) return;
+
+    const horizontalPadding = 8;
+    const availableWidth = Math.max(1, canvasStageWidth - horizontalPadding);
+    const availableHeight = Math.max(180, Math.floor(windowHeight * 0.55));
+    fabricCanvas.fitVirtualZoom(availableWidth, availableHeight);
   };
 
   const getCanvasForPreview = (): FabricJson => {
@@ -431,12 +442,21 @@
       renderOnFontsChanged();
     }
   });
+
+  $effect(() => {
+    fabricCanvas;
+    canvasStageWidth;
+    windowHeight;
+    labelProps.size.width;
+    labelProps.size.height;
+    tick().then(fitCanvasToBrowser);
+  });
 </script>
 
-<svelte:window bind:innerWidth={windowWidth} onkeydown={onKeyDown} onpaste={onPaste} />
+<svelte:window bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} onkeydown={onKeyDown} onpaste={onPaste} />
 
 <div class="image-editor">
-  <div class="row mb-3">
+  <div class="row mb-3 canvas-stage" bind:clientWidth={canvasStageWidth}>
     <div class="col d-flex {windowWidth === 0 || labelProps.size.width < windowWidth ? 'justify-content-center' : ''}">
       <div class="canvas-wrapper print-start-{labelProps.printDirection}">
         <canvas bind:this={htmlCanvas}></canvas>
@@ -550,6 +570,7 @@
   .canvas-wrapper {
     border: 1px solid var(--border-standard);
     background-color: var(--surface-1);
+    max-width: 100%;
   }
   .canvas-wrapper.print-start-left {
     border-left: 2px solid var(--mark-feed);
