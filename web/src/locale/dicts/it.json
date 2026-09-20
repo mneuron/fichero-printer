@@ -104,6 +104,7 @@
     "params.variables.insert": "Inserisci variabile",
     "params.text.orientation": "Orientamento testo",
     "params.text.orientation.horizontal": "Testo orizzontale",
+    "params.text.orientation.restore_horizontal": "Ripristina il testo orizzontale",
     "params.text.orientation.stacked": "Testo verticale con caratteri in piedi",
     "preview.close": "Chiudi",
     "preview.copies": "Copie",

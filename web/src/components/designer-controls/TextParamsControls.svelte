@@ -122,6 +122,10 @@
     }
   };
 
+  const toggleTextOrientation = () => {
+    textOrientationChanged(selectedText instanceof TextboxExt && selectedText.textOrientation === "stacked" ? "horizontal" : "stacked");
+  };
+
 
 </script>
 
@@ -235,20 +239,14 @@
 {/if}
 
 {#if selectedText instanceof TextboxExt}
-  <div class="btn-group btn-group-sm" role="group" title={$tr("params.text.orientation")}>
-    <button
-      class="btn {selectedText.textOrientation === 'horizontal' ? 'btn-secondary' : ''}"
-      onclick={() => textOrientationChanged("horizontal")}
-      title={$tr("params.text.orientation.horizontal")}>
-      <MdIcon icon="text_fields" />
-    </button>
-    <button
-      class="btn {selectedText.textOrientation === 'stacked' ? 'btn-secondary' : ''}"
-      onclick={() => textOrientationChanged("stacked")}
-      title={$tr("params.text.orientation.stacked")}>
-      <MdIcon icon="vertical_distribute" />
-    </button>
-  </div>
+  <button
+    class="btn btn-sm {selectedText.textOrientation === 'stacked' ? 'btn-primary' : 'btn-secondary'}"
+    onclick={toggleTextOrientation}
+    title={selectedText.textOrientation === "stacked"
+      ? $tr("params.text.orientation.restore_horizontal")
+      : $tr("params.text.orientation.stacked")}>
+    <MdIcon icon={selectedText.textOrientation === "stacked" ? "text_fields" : "vertical_distribute"} />
+  </button>
 
   <!-- fixme: Custom property not auto-rendered for some reason -->
   <button

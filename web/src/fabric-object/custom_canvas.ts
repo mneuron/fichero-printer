@@ -125,13 +125,15 @@ export class CustomCanvas extends fabric.Canvas {
     if (!this.gridVisible || !this.customBackground || this.gridSpacing <= 0) return;
 
     const bb = this.getLabelBounds();
-    const minorWidth = 0.5 / this.virtualZoomRatio;
-    const majorWidth = 0.8 / this.virtualZoomRatio;
+    // Keep a real raster width: sub-pixel lines disappear when Firefox Android
+    // enlarges the lower canvas through CSS.
+    const minorWidth = 0.5;
+    const majorWidth = 1;
 
     for (let x = bb.startX + this.gridSpacing; x < bb.endX; x += this.gridSpacing) {
       const millimetre = Math.round((x - bb.startX) / this.gridSpacing);
       ctx.beginPath();
-      ctx.strokeStyle = millimetre % 5 === 0 ? "rgba(70, 110, 150, 0.32)" : "rgba(70, 110, 150, 0.15)";
+      ctx.strokeStyle = millimetre % 5 === 0 ? "rgba(45, 105, 165, 0.48)" : "rgba(45, 105, 165, 0.26)";
       ctx.lineWidth = millimetre % 5 === 0 ? majorWidth : minorWidth;
       ctx.moveTo(x, bb.startY);
       ctx.lineTo(x, bb.endY);
@@ -141,7 +143,7 @@ export class CustomCanvas extends fabric.Canvas {
     for (let y = bb.startY + this.gridSpacing; y < bb.endY; y += this.gridSpacing) {
       const millimetre = Math.round((y - bb.startY) / this.gridSpacing);
       ctx.beginPath();
-      ctx.strokeStyle = millimetre % 5 === 0 ? "rgba(70, 110, 150, 0.32)" : "rgba(70, 110, 150, 0.15)";
+      ctx.strokeStyle = millimetre % 5 === 0 ? "rgba(45, 105, 165, 0.48)" : "rgba(45, 105, 165, 0.26)";
       ctx.lineWidth = millimetre % 5 === 0 ? majorWidth : minorWidth;
       ctx.moveTo(bb.startX, y);
       ctx.lineTo(bb.endX, y);

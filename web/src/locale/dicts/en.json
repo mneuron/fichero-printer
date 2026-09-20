@@ -133,6 +133,7 @@
     "params.text.line_height": "Line height",
     "params.text.orientation": "Text orientation",
     "params.text.orientation.horizontal": "Horizontal text",
+    "params.text.orientation.restore_horizontal": "Restore horizontal text",
     "params.text.orientation.stacked": "Vertical text with upright characters",
     "params.params.text.split": "Text split (wrap)",
     "params.params.text.split.spaces": "Spaces",
